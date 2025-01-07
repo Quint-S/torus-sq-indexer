@@ -1,0 +1,37 @@
+{
+  "name": "torus-sq-indexer",
+  "version": "1.0.0",
+  "description": "torus indexer",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "subql codegen && subql build",
+    "codegen": "subql codegen",
+    "start:docker": "docker compose pull && docker compose up --remove-orphans",
+    "dev": "subql codegen && subql build && docker compose pull && docker compose up --remove-orphans",
+    "prepack": "rm -rf dist && npm run build",
+    "publish": "subql publish",
+    "test": "subql build && subql-node test",
+    "build:develop": "NODE_ENV=develop subql codegen && NODE_ENV=develop subql build"
+  },
+  "homepage": "https://github.com/subquery/subql-starter",
+  "repository": "github:subquery/subql-starter",
+  "files": [
+    "dist",
+    "schema.graphql",
+    "project.yaml"
+  ],
+  "author": "quint",
+  "license": "MIT",
+  "devDependencies": {
+    "@polkadot/api": "^14",
+    "@subql/cli": "latest",
+    "@subql/testing": "latest",
+    "@subql/types": "latest",
+    "typescript": "^5.2.2",
+    "@subql/common-substrate": "latest",
+    "dotenv": "latest"
+  },
+  "resolutions": {
+    "ipfs-unixfs": "6.0.6"
+  }
+}

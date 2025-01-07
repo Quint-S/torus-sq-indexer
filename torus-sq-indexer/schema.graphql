@@ -1,0 +1,98 @@
+type Transfer @entity {
+  id: ID!
+
+  from: String! @index
+  to: String! @index
+  amount: BigInt! @index
+
+  blockNumber: BigInt! @index
+  extrinsicId: Int! @index
+}
+
+type Extrinsic @entity {
+  id: ID!
+  module: String!
+  method: String! @index
+
+  blockNumber: BigInt! @index
+  extrinsicId: Int! @index
+
+  tip: BigInt!
+  version: Int!
+
+  signer: String! @index
+  success: Boolean!
+  hash: String! @index
+
+  args: String!
+}
+
+type Block @entity {
+  id: ID!
+  height: BigInt! @index
+
+  eventCount: Int!
+  extrinsicCount: Int!
+
+  hash: String! @index
+  parentHash: String!
+
+  specVersion: Int!
+  timestamp: Date! @index
+}
+
+type Event @entity {
+  id: ID!
+  blockNumber: BigInt! @index
+  extrinsicId: Int! @index
+  eventName: String! @index
+  module: String!
+  data: String!
+}
+
+
+type Agent @entity {
+  id: ID!
+  registeredAt: Int! @index
+  timestamp: Date! @index
+  extrinsicId: Int!
+  metadata: String! @index
+  name: String! @index
+}
+
+enum DelegateAction {
+  DELEGATE
+  UNDELEGATE
+}
+
+type DelegationEvent @entity {
+  id: ID!
+
+  height: Int! @index
+  extrinsicId: Int!
+  account: String!
+  agent: String! @index
+  amount: BigInt! @index
+  action: DelegateAction!
+}
+
+type DelegateBalance @entity {
+  id: ID!
+
+  lastUpdate: Int! @index
+  account: String! @index
+  agent: String! @index
+  amount: BigInt! @index
+}
+type Account @entity {
+  id: ID!
+
+  address: String! @index
+
+  createdAt: BigInt! @index
+  updatedAt: BigInt! @index
+
+  balance_free: BigInt! @index
+  balance_staked: BigInt! @index
+  balance_total: BigInt! @index
+}
