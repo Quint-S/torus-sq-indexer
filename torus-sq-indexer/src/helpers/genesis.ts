@@ -2371,30 +2371,3 @@ const bridged =  [
     ]
 ];
 
-export const handleGenesisBalances = async () => {
-    const bridgedxfers: Transfer[] = [];
-
-    for (const transfer of bridged) {
-        const from = 'CommuneBridge';
-        const to = transfer[0].toString();
-        const amount = BigInt(transfer[1]) * BigInt(1000000000);
-
-        const blockNumber = BigInt(0);
-        const extrinsicId = 0;
-
-        const entity = Transfer.create({
-            id: `0-0`,
-            from,
-            to,
-            amount,
-            blockNumber,
-            extrinsicId,
-        });
-        bridgedxfers.push(entity);
-    }
-
-    await store.bulkCreate("Transfer", bridgedxfers);
-
-
-
-}

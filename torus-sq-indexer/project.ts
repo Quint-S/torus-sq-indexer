@@ -25,6 +25,10 @@ const project: SubstrateProject = {
     node: {
       name: "@subql/node",
       version: ">=3.0.1",
+      options: {
+        historical: true,
+        unfinalizedBlocks: false
+      }
     },
     query: {
       name: "@subql/query",

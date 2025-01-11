@@ -34,6 +34,7 @@ async function indexExtrinsicsAndEvents(block: SubstrateBlock) {
   const blockHeight = block.block.header.number.toString();
   const extrinsics = block.block.extrinsics;
   const events = block.events;
+  // handleGenesisBalances().then(() => logger.info(`fixed genesis xfers`))
 
   Block.create({
     id: blockHeight,
@@ -102,6 +103,7 @@ export async function handleTransfer(event: SubstrateEvent): Promise<void> {
     idx,
     event: { data },
     block: {
+      timestamp,
       block: {
         header: { number },
       },
@@ -122,6 +124,7 @@ export async function handleTransfer(event: SubstrateEvent): Promise<void> {
     amount,
     blockNumber,
     extrinsicId,
+    timestamp: timestamp ?? new Date()
   });
 
 
@@ -231,17 +234,25 @@ async function updateAllAccounts(block: SubstrateBlock) {
 
     const totalBalance = freeBalance + stakedBalance;
 
-    entities.push(
-        Account.create({
-          id: address,
-          address,
-          createdAt: ZERO,
-          updatedAt: height,
-          balance_free: freeBalance,
-          balance_staked: stakedBalance,
-          balance_total: totalBalance,
-        })
-    );
+    const existingAccount = await Account.get(address);
+    if(existingAccount){
+      existingAccount.updatedAt = height;
+      existingAccount.balance_free = freeBalance;
+      existingAccount.balance_total = totalBalance;
+      existingAccount.balance_staked = stakedBalance;
+    }else {
+      entities.push(
+          Account.create({
+            id: address,
+            address,
+            createdAt: height,
+            updatedAt: height,
+            balance_free: freeBalance,
+            balance_staked: stakedBalance,
+            balance_total: totalBalance,
+          })
+      );
+    }
   }
   await store.bulkCreate("Account", entities);
   /*
@@ -413,7 +424,7 @@ export const handleGenesisBalances = async () => {
   for (const transfer of bridged) {
     const from = 'CommuneBridge';
     const to = transfer[0].toString();
-    const amount = BigInt(transfer[1]) * BigInt(1000000000);
+    const amount = BigInt(transfer[1]);
 
     const blockNumber = BigInt(0);
     const extrinsicId = 0;
@@ -425,6 +436,7 @@ export const handleGenesisBalances = async () => {
       amount,
       blockNumber,
       extrinsicId,
+      timestamp: new Date(1735945860000)
     });
     bridgedxfers.push(entity);
   }
