@@ -13,7 +13,7 @@ import {
   DelegateBalance,
   DelegateAction,
   DelegationEvent,
-  Agent
+  Agent, ChainInfo
 } from "../types";
 import {initAccount} from "../helpers";
 import {ZERO, formattedNumber, bridged} from "../utils/consts";
@@ -224,6 +224,7 @@ async function updateAllAccounts(block: SubstrateBlock) {
   const apiAt = api;
 
   let entities: Account[] = [];
+  let totalCirculating = ZERO;
   const accounts = await apiAt.query.system.account.entries();
   for (const account of accounts) {
     const address = `${account[0].toHuman()}`;
@@ -233,6 +234,7 @@ async function updateAllAccounts(block: SubstrateBlock) {
         ZERO) ?? ZERO;
 
     const totalBalance = freeBalance + stakedBalance;
+    totalCirculating += totalBalance;
 
     const existingAccount = await Account.get(address);
     if(existingAccount){
@@ -240,6 +242,9 @@ async function updateAllAccounts(block: SubstrateBlock) {
       existingAccount.balance_free = freeBalance;
       existingAccount.balance_total = totalBalance;
       existingAccount.balance_staked = stakedBalance;
+      existingAccount.save().then(() =>{
+        //saved
+      })
     }else {
       entities.push(
           Account.create({
@@ -255,6 +260,9 @@ async function updateAllAccounts(block: SubstrateBlock) {
     }
   }
   await store.bulkCreate("Account", entities);
+  ChainInfo.create({id: 'CircSupply', value: totalCirculating.toString(), updatedAt: new Date()}).save().then(() => {
+    logger.info(`#${height}: sync CircSupply`);
+  })
   /*
   const pageSize = 1000;
   let currentPage = "0x";

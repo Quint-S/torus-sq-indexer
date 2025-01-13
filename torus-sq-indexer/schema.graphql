@@ -11,6 +11,13 @@ type Transfer @entity {
   timestamp: Date! @index
 }
 
+type ChainInfo @entity {
+  id: ID!
+  value: String!
+  updatedAt: Date!
+}
+
+
 type Extrinsic @entity {
   id: ID!
   module: String!
