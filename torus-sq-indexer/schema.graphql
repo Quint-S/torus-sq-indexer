@@ -62,10 +62,14 @@ type Event @entity {
 
 type Agent @entity {
   id: ID!
-  registeredAt: Int! @index
+  registeredAt: BigInt! @index
   timestamp: Date! @index
   extrinsicId: Int!
-  metadata: String! @index
+  metadata: String!
+  url: String!
+  stakingFee: String!
+  weightControlFee: String!
+  weightPenaltyFactor: String!
   name: String! @index
 }
 

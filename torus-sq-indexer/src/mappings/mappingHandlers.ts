@@ -15,23 +15,70 @@ import {
   DelegationEvent,
   Agent, ChainInfo
 } from "../types";
-import {initAccount} from "../helpers";
+import {decFreeBalance, incFreeBalance, initAccount, stakeBalance, unstakeBalance} from "../helpers";
 import {ZERO, formattedNumber, bridged} from "../utils/consts";
 
 export async function fetchExtrinsics(block: SubstrateBlock): Promise<void> {
 
   const height = block.block.header.number.toBigInt();
 
-  logger.info(`Fetching extrinsics and events at block #${height}`);
+  // logger.info(`Fetching extrinsics and events at block #${height}`);
 
   indexExtrinsicsAndEvents(block).then(() => {
-    logger.info(`Finished fetching extrinsics and events at block #${height}`)
+    // logger.info(`Finished fetching extrinsics and events at block #${height}`)
   });
 }
+
+async function fixBlockHashes(){
+  //
+  // const stopat = 258754;
+  // //
+  // logger.info('start fix block hashes');
+  // for (let i = 1; i < stopat; i++) {
+  //   let block = await Block.get(`${i}`);
+  //     if(block){
+  //       unsafeApi?.rpc.chain.getBlockHash(i).then(hash => {
+  //         block.hash = hash.toString();
+  //         if(i > 1) {
+  //           unsafeApi?.rpc.chain.getBlockHash(i - 1).then(hash => {
+  //             block.parentHash = hash.toString();
+  //             if (i % 1000 === 0) {
+  //               logger.info(`FIX BLOCK ${i}`)
+  //             }
+  //             block.save();
+  //           })
+  //         }else{
+  //           block.parentHash = "0x0e00b212768e28b176d069890c106e37c331ea9b16b207f4e9baf67b3f3f3021";
+  //           block.save();
+  //         }
+  //       })
+  //     }
+  // }
+
+
+}
+
+let fixblockhashes = false;
+
 async function indexExtrinsicsAndEvents(block: SubstrateBlock) {
+
+  // if(!fixblockhashes){
+  //   fixBlockHashes().then(() => {
+  //     logger.info(`FINISHED FIXING BLOCK HASHES`)
+  //   })
+  //   fixblockhashes = true;
+  // }
+
 
   const height = block.block.header.number.toBigInt();
   const blockHeight = block.block.header.number.toString();
+  // const parentHeight = height - BigInt(1);
+
+  const hash = block.block.header.hash.toHex();//await unsafeApi?.rpc.chain.getBlockHash(height);
+
+  // logger.info(`${block.block.header.hash.toHex()} = ${hash?.toString()}`);
+
+  const parentHash = block.block.header.parentHash.toString();//await api.query.system.blockHash(parentHeight);
   const extrinsics = block.block.extrinsics;
   const events = block.events;
   // handleGenesisBalances().then(() => logger.info(`fixed genesis xfers`))
@@ -42,10 +89,12 @@ async function indexExtrinsicsAndEvents(block: SubstrateBlock) {
     eventCount: events.length,
     extrinsicCount: extrinsics.length,
     timestamp: block.timestamp ?? new Date(),
-    hash: block.hash.toString(),
-    parentHash: block.block.header.parentHash.toString(),
+    hash,
+    parentHash,
     specVersion: block.specVersion
-  }).save().then(() => logger.info(`Added block #${height}`))
+  }).save().then(() => {
+    // logger.info(`Added block #${height}`)
+  });
 
   let eventEntities: Event[] = [];
   for (const [index, event] of events.entries()) {
@@ -134,54 +183,18 @@ export async function handleTransfer(event: SubstrateEvent): Promise<void> {
   await entity.save();
 }
 
-export async function incFreeBalance(
-    address: string,
-    amount: bigint,
-    height: bigint
-): Promise<void> {
-  let entity = await Account.get(address);
-  if (!entity) {
-    entity = initAccount(address, height);
-  }
 
-  if (!(entity.createdAt === height && entity.balance_free !== ZERO)) {
-    entity.updatedAt = height;
-    entity.balance_free += amount;
-    entity.balance_total += amount;
-  }
-
-  await entity.save();
-}
-
-export async function decFreeBalance(
-    address: string,
-    amount: bigint,
-    height: bigint
-): Promise<void> {
-  let entity = await Account.get(address);
-
-  if (!entity) return;
-
-  let dec = entity.balance_free < amount ? entity.balance_free : amount;
-
-  entity.updatedAt = height;
-  entity.balance_free -= dec;
-  entity.balance_total -= dec;
-
-  await entity.save();
-}
 export async function fetchDelegations(block: SubstrateBlock): Promise<void> {
   if (!api) return;
 
-  const hash = block.block.header.hash.toString();
   const apiAt = api
 
-  logger.info(`#${block.block.header.number.toNumber()}: fetchDelegations`);
+  // logger.info(`#${block.block.header.number.toNumber()}: fetchDelegations`);
   const height = block.block.header.number.toNumber();
 
   apiAt.query.torus0.stakingTo.entries().then(async stakeTo => {
     const records: DelegateBalance[] = [];
-    logger.info(`#${height}: syncStakedAmount`);
+    // logger.info(`#${height}: syncStakedAmount`);
     for (const [key, value] of stakeTo) {
       const [account, agent] = key.toHuman() as [string, string];
       const amount = BigInt(value.toString());
@@ -208,11 +221,74 @@ export async function fetchAccounts(block: SubstrateBlock): Promise<void> {
 
   const height = block.block.header.number.toBigInt();
 
-  logger.info(`Fetching accounts at block #${height}`);
+  // logger.info(`Fetching accounts at block #${height}`);
 
   updateAllAccounts(block).then(() => {
-    logger.info(`Finished fetching accounts at block #${height}`)
+    // logger.info(`Finished fetching accounts at block #${height}`)
   });
+
+
+  updateAllAgents(block).then(() =>{
+    logger.info(`Finished updating agents at block #${height}`)
+  })
+  api.query.balances.totalIssuance().then(circulating => {
+    ChainInfo.create({id: 'CircSupply', value: circulating.toString(), updatedAt: new Date()}).save().then(() => {
+      // logger.info(`#${height}: sync CircSupply`);
+    });
+  });
+  api.query.torus0.totalStake().then(totalStake => {
+    ChainInfo.create({id: 'TotalStake', value: totalStake.toString(), updatedAt: new Date()}).save().then(() => {
+      // logger.info(`#${height}: sync TotalStake`);
+    });
+  })
+
+}
+
+async function updateAllAgents(block: SubstrateBlock){
+  // logger.info(` sync agents start`);//309082
+try {
+  const agentEntries = await api.query.torus0.agents.entries();
+  for (let agent of agentEntries) {
+    let [args, agentInfo] = agent;
+    let [keyParam] = args.args;
+    const key = `${keyParam.toHuman()}`;
+    let info: any = agentInfo.toHuman();
+    // logger.info(key);
+    // logger.info(JSON.stringify(info));
+
+    Agent.get(key).then(existingAgent => {
+      if (existingAgent) {
+        existingAgent.name = info.name;
+        existingAgent.url = info.url;
+        existingAgent.metadata = info.metadata;
+        existingAgent.weightPenaltyFactor = info.weightPenaltyFactor;
+        existingAgent.weightControlFee = info.fees.weightControlFee;
+        existingAgent.stakingFee = info.fees.stakingFee;
+        existingAgent.save();
+      } else {
+        const entity = Agent.create({
+          id: key,
+          name: info.name,
+          metadata: info.metadata,
+          url: info.url,
+          stakingFee: info.fees.stakingFee,
+          weightControlFee: info.fees.weightControlFee,
+          weightPenaltyFactor: info.weightPenaltyFactor,
+          registeredAt: BigInt(info.registrationBlock.replace(',', '')),
+          timestamp: new Date(),
+          extrinsicId: -1
+        });
+        entity.save();
+      }
+    });
+
+  }
+}catch (e) {
+  logger.info(`ERROR:::: ${e}`);
+
+}
+
+
 }
 
 async function updateAllAccounts(block: SubstrateBlock) {
@@ -224,7 +300,6 @@ async function updateAllAccounts(block: SubstrateBlock) {
   const apiAt = api;
 
   let entities: Account[] = [];
-  let totalCirculating = ZERO;
   const accounts = await apiAt.query.system.account.entries();
   for (const account of accounts) {
     const address = `${account[0].toHuman()}`;
@@ -234,7 +309,6 @@ async function updateAllAccounts(block: SubstrateBlock) {
         ZERO) ?? ZERO;
 
     const totalBalance = freeBalance + stakedBalance;
-    totalCirculating += totalBalance;
 
     const existingAccount = await Account.get(address);
     if(existingAccount){
@@ -260,9 +334,7 @@ async function updateAllAccounts(block: SubstrateBlock) {
     }
   }
   await store.bulkCreate("Account", entities);
-  ChainInfo.create({id: 'CircSupply', value: totalCirculating.toString(), updatedAt: new Date()}).save().then(() => {
-    logger.info(`#${height}: sync CircSupply`);
-  })
+
   /*
   const pageSize = 1000;
   let currentPage = "0x";
@@ -370,8 +442,10 @@ const handleDelegation = async (
   }
   if (action === DelegateAction.DELEGATE) {
     balanceRecord.amount += amount;
+    stakeBalance(account, amount, event.block.block.header.number.toBigInt());
   } else {
     balanceRecord.amount -= amount;
+    unstakeBalance(account, amount, event.block.block.header.number.toBigInt());
     if (balanceRecord.amount < ZERO) {
       balanceRecord.amount = ZERO;
     }
@@ -388,6 +462,36 @@ const handleDelegation = async (
 export async function handleAgentRegistered(event: SubstrateEvent): Promise<void> {
   if (!event.extrinsic || !api) return;
 
+  const height = event.block.block.header.number.toBigInt();
+  const { block: { timestamp, block: {header: {hash}} }, event: { data }, extrinsic } = event;
+
+  const key = data[0].toString();
+
+  const {method: {args, method, section}} = event.extrinsic.extrinsic;
+  const name = `${args[1].toHuman()}`;
+  const url = `${args[3].toHuman()}`;
+  const metadata = `${args[2].toHuman()}`;
+
+  const entity = Agent.create({
+    id: key,
+    name,
+    metadata,
+    url,
+    stakingFee: '',
+    weightControlFee: '',
+    weightPenaltyFactor: '',
+    registeredAt: height,
+    timestamp: timestamp ?? new Date(),
+    extrinsicId: extrinsic?.idx ?? -1
+  });
+
+  entity.save().then(r => {});
+}
+
+export async function handleAgentUpdated(event: SubstrateEvent): Promise<void> {
+
+  if (!event.extrinsic || !api) return;
+
   const height = event.block.block.header.number.toNumber();
   const { block: { timestamp, block: {header: {hash}} }, event: { data }, extrinsic } = event;
 
@@ -395,18 +499,25 @@ export async function handleAgentRegistered(event: SubstrateEvent): Promise<void
 
   const {method: {args, method, section}} = event.extrinsic.extrinsic;
   const name = `${args[1].toHuman()}`;
+  const url = `${args[3].toHuman()}`;
   const metadata = `${args[2].toHuman()}`;
+  Agent.get(key).then(existingAgent => {
+    if(existingAgent){
+      api.query.torus0.agents(key).then(agentInfo => {
+        let info: any = agentInfo.toHuman();
+        existingAgent.name = info.name;
+        existingAgent.url = info.url;
+        existingAgent.metadata = info.metadata;
+        existingAgent.weightPenaltyFactor = info.weightPenaltyFactor;
+        existingAgent.weightControlFee = info.fees.weightControlFee;
+        existingAgent.stakingFee = info.fees.stakingFee;
+        existingAgent.save();
+      });
 
-  const entity = Agent.create({
-    id: key,
-    name,
-    metadata,
-    registeredAt: height,
-    timestamp: timestamp ?? new Date(),
-    extrinsicId: extrinsic?.idx ?? -1
+    }
   });
 
-  await entity.save();
+  // await entity.save();
 }
 
 export async function handleAgentUnregistered(event: SubstrateEvent): Promise<void> {

@@ -7,6 +7,7 @@ import {
 import * as dotenv from 'dotenv';
 // @ts-ignore
 import path from 'path';
+import {handleAgentUpdated} from "./src";
 
 const mode = process.env.NODE_ENV || 'production';
 
@@ -33,6 +34,7 @@ const project: SubstrateProject = {
     query: {
       name: "@subql/query",
       version: "*",
+
     },
   },
   schema: {
@@ -126,6 +128,14 @@ const project: SubstrateProject = {
             filter: {
               module: "torus0",
               method: "AgentRegistered",
+            },
+          },
+          {
+            kind: SubstrateHandlerKind.Event,
+            handler: "handleAgentUpdated",
+            filter: {
+              module: "torus0",
+              method: "AgentUpdated",
             },
           },
           {
