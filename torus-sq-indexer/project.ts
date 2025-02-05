@@ -107,6 +107,14 @@ const project: SubstrateProject = {
           },
           {
             kind: SubstrateHandlerKind.Event,
+            handler: "handleKillAccount",
+            filter: {
+              module: "system",
+              method: "KilledAccount",
+            },
+          },
+          {
+            kind: SubstrateHandlerKind.Event,
             handler: "handleStakeRemoved",
             filter: {
               module: "torus0",

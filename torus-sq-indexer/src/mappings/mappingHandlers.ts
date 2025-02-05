@@ -291,6 +291,26 @@ try {
 
 }
 
+async function handleKillAccount(event: SubstrateEvent): Promise<void> {
+    const {
+      idx,
+      event: { data },
+      block: {
+        timestamp,
+        block: {
+          header: { number },
+        },
+      },
+    } = event;
+    Account.get(data[0].toString()).then(async account => {
+      if (account) {
+        account.balance_free = BigInt(0);
+        await account.save();
+      }
+    })
+}
+
+
 async function updateAllAccounts(block: SubstrateBlock) {
   if (!api) throw new Error("API not initialized");
 
