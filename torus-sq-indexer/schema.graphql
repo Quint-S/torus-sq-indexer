@@ -5,7 +5,7 @@ type Transfer @entity {
   to: String! @index
   amount: BigInt! @index
 
-  blockNumber: BigInt! @index
+  blockNumber: Int! @index
   extrinsicId: Int! @index
 
   timestamp: Date! @index
@@ -23,7 +23,7 @@ type Extrinsic @entity {
   module: String!
   method: String! @index
 
-  blockNumber: BigInt! @index
+  blockNumber: Int! @index
   extrinsicId: Int! @index
 
   tip: BigInt!
@@ -38,7 +38,7 @@ type Extrinsic @entity {
 
 type Block @entity {
   id: ID!
-  height: BigInt! @index
+  height: Int! @index
 
   eventCount: Int!
   extrinsicCount: Int!
@@ -52,7 +52,7 @@ type Block @entity {
 
 type Event @entity {
   id: ID!
-  blockNumber: BigInt! @index
+  blockNumber: Int! @index
   extrinsicId: Int! @index
   eventName: String! @index
   module: String!
@@ -62,7 +62,7 @@ type Event @entity {
 
 type Agent @entity {
   id: ID!
-  registeredAt: BigInt! @index
+  registeredAt: Int! @index
   timestamp: Date! @index
   extrinsicId: Int!
   metadata: String!
@@ -102,8 +102,8 @@ type Account @entity {
 
   address: String! @index
 
-  createdAt: BigInt! @index
-  updatedAt: BigInt! @index
+  createdAt: Int! @index
+  updatedAt: Int! @index
 
   balance_free: BigInt! @index
   balance_staked: BigInt! @index

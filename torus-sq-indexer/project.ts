@@ -105,14 +105,14 @@ const project: SubstrateProject = {
               method: "Transfer",
             },
           },
-          {
-            kind: SubstrateHandlerKind.Event,
-            handler: "handleKillAccount",
-            filter: {
-              module: "system",
-              method: "KilledAccount",
-            },
-          },
+          // {
+          //   kind: SubstrateHandlerKind.Event,
+          //   handler: "handleKillAccount",
+          //   filter: {
+          //     module: "system",
+          //     method: "KilledAccount",
+          //   },
+          // },
           {
             kind: SubstrateHandlerKind.Event,
             handler: "handleStakeRemoved",

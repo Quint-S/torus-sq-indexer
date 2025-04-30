@@ -6,7 +6,7 @@ import {ZERO} from "../utils/consts";
 export async function incFreeBalance(
     address: string,
     amount: bigint,
-    height: bigint
+    height: number
 ): Promise<void> {
   let entity = await Account.get(address);
   if (!entity) {
@@ -25,7 +25,7 @@ export async function incFreeBalance(
 export async function decFreeBalance(
     address: string,
     amount: bigint,
-    height: bigint
+    height: number
 ): Promise<void> {
   let entity = await Account.get(address);
 
@@ -43,7 +43,7 @@ export async function decFreeBalance(
 export async function stakeBalance(
     address: string,
     amount: bigint,
-    height: bigint
+    height: number
 ): Promise<void> {
   let entity = await Account.get(address);
   if (!entity) {
@@ -53,14 +53,14 @@ export async function stakeBalance(
   entity.updatedAt = height;
   entity.balance_staked += amount;
   entity.balance_free -= amount;
-
+logger.info(`${address} staked ${amount}`)
   await entity.save();
 }
 
 export async function unstakeBalance(
     address: string,
     amount: bigint,
-    height: bigint
+    height: number
 ): Promise<void> {
   let entity = await Account.get(address);
 
