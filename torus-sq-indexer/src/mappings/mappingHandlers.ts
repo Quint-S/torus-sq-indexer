@@ -54,33 +54,15 @@ async function fixBlockHashes(){
   //       })
   //     }
   // }
-// Account.get('5CcCre6yxDeJkoHyAqvqY3hYchM8RzSVyKgY9f9yd222ye3j').then(acc => {
-//   if(acc){
-//     if(acc.balance_free === BigInt('2499999999999999813615616')) {
-//       acc.balance_free = ZERO;
-//       acc.balance_total = BigInt("2499999990000000490799104");
-//       acc.save();
-//     }
-//
-//   }
-// })
-
 }
 
 let fixblockhashes = false;
 
 async function indexExtrinsicsAndEvents(block: SubstrateBlock) {
 
-  // if(!fixblockhashes){
-  //   fixBlockHashes().then(() => {
-  //     logger.info(`FINISHED FIXING BLOCK HASHES`)
-  //   })
-  //   fixblockhashes = true;
-  // }
-
   const height = block.block.header.number.toNumber();
   const blockHeight = block.block.header.number.toString();
-  // const parentHeight = height - BigInt(1);
+
 
   const hash = block.block.header.hash.toHex();//await unsafeApi?.rpc.chain.getBlockHash(height);
 
@@ -88,7 +70,6 @@ async function indexExtrinsicsAndEvents(block: SubstrateBlock) {
   const parentHash = block.block.header.parentHash.toString();//await api.query.system.blockHash(parentHeight);
   const extrinsics = block.block.extrinsics;
   const events = block.events;
-  // handleGenesisBalances().then(() => logger.info(`fixed genesis xfers`))
 
   Block.create({
     id: blockHeight,
