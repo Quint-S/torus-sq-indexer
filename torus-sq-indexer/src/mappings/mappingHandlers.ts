@@ -13,7 +13,7 @@ import {
   DelegateBalance,
   DelegateAction,
   DelegationEvent,
-  Agent, ChainInfo
+  Agent, ChainInfo, BridgeAction, BridgeTransfer
 } from "../types";
 import {decFreeBalance, incFreeBalance, initAccount, stakeBalance, unstakeBalance} from "../helpers";
 import {ZERO, formattedNumber, bridged} from "../utils/consts";
@@ -29,7 +29,64 @@ export async function fetchExtrinsics(block: SubstrateBlock): Promise<void> {
   });
 }
 
-async function fixBlockHashes(){
+async function getHistoricalDeposits(){
+  async function processAllTransfers() {
+    const toAddress = '5DDXwRsgvdfukGZbq2o27n43qyDaAnZ6rsfeckGxnaQ1ih2D';
+    const pageSize = 100;
+    let offset = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const results = await Transfer.getByTo(toAddress, {
+        limit: pageSize,
+        offset: offset
+      });
+
+      if (!results || results.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      for (const transfer of results) {
+        const events = await Event.getByFields([
+          ["blockNumber", "=", transfer.blockNumber],
+          ["extrinsicId", "=", transfer.extrinsicId],
+        ], {limit:100});
+        let evmAddress = JSON.parse(events.filter(event => event.eventName === 'Executed')[0].data)[0];
+
+        const result = await Transfer.getByTo(transfer.from, {
+          limit: 1
+        });
+        if (result && result[0]) {
+          const bridger = result[0].from;
+
+          await BridgeTransfer.create({
+            id: transfer.id,
+            address: bridger,
+            evmAddress,
+            intermediaryAddress: transfer.from,
+            amountBridged: transfer.amount,
+            toBase: true
+          }).save();
+        }
+      }
+
+      offset += results.length;
+      if (results.length < pageSize) {
+        hasMore = false;
+      }
+    }
+  }
+
+  // while (true){
+  //   const allDelegated = await BridgeAction.getByFields([], {limit: 100})
+  //   await store.bulkRemove("BridgeAction", allDelegated.map(delegated => delegated.id))
+  //   logger.info('removing old bridgeaction records');
+  //   if (allDelegated.length < 100) break;
+  // }
+
+  processAllTransfers();
+
   //
   // const stopat = 258754;
   // //
@@ -59,6 +116,10 @@ async function fixBlockHashes(){
 let fixblockhashes = false;
 
 async function indexExtrinsicsAndEvents(block: SubstrateBlock) {
+  // if(!fixblockhashes){
+  //   getHistoricalDeposits();
+  //   fixblockhashes = true;
+  // }
 
   const height = block.block.header.number.toNumber();
   const blockHeight = block.block.header.number.toString();
@@ -163,6 +224,32 @@ export async function handleTransfer(event: SubstrateEvent): Promise<void> {
     timestamp: timestamp ?? new Date()
   });
 
+  if(to === '5DDXwRsgvdfukGZbq2o27n43qyDaAnZ6rsfeckGxnaQ1ih2D'){
+    //base deposit
+    Transfer.getByTo(from, {
+      limit: 1
+    }).then(result => {
+      Event.getByFields([
+        ["blockNumber", "=", blockNumber],
+        ["extrinsicId", "=", extrinsicId],
+      ], {limit:100}).then(events => {
+        let evmAddress = JSON.parse(events.filter(event => event.eventName === 'Executed')[0].data)[0];
+
+        if(result[0]){
+          const bridger = result[0].from;
+          BridgeTransfer.create({
+            id: `${blockNumber.toString()}-${idx}`,
+            address: bridger,
+            evmAddress,
+            intermediaryAddress: from,
+            amountBridged: amount,
+            toBase: true
+          }).save();
+        }
+      })
+
+    })
+  }
 
   await incFreeBalance(to, amount, blockNumber);
   await decFreeBalance(from, amount, blockNumber);

@@ -109,3 +109,26 @@ type Account @entity {
   balance_staked: BigInt! @index
   balance_total: BigInt! @index
 }
+
+type BridgeAction @entity {
+  id: ID!
+
+  address: String! @index
+  intermediaryAddress: String! @index
+
+  amountBridged: BigInt! @index
+
+  toBase: Boolean! @index
+}
+
+type BridgeTransfer @entity {
+  id: ID!
+
+  evmAddress: String! @index
+  address: String! @index
+  intermediaryAddress: String! @index
+
+  amountBridged: BigInt! @index
+
+  toBase: Boolean! @index
+}
