@@ -196,65 +196,70 @@ async function indexExtrinsicsAndEvents(block: SubstrateBlock) {
 
 export async function handleTransfer(event: SubstrateEvent): Promise<void> {
 
-  const {
-    idx,
-    event: { data },
-    block: {
-      timestamp,
+  try {
+    const {
+      idx,
+      event: { data },
       block: {
-        header: { number },
+        timestamp,
+        block: {
+          header: { number },
+        },
       },
-    },
-  } = event;
+    } = event;
 
-  const from = data[0].toString();
-  const to = data[1].toString();
-  const amount = BigInt(data[2].toString());
+    const from = data[0].toString();
+    const to = data[1].toString();
+    const amount = BigInt(data[2].toString());
 
-  const blockNumber = number.toNumber();
-  const extrinsicId = event.phase.asApplyExtrinsic.toPrimitive() as number;
+    const blockNumber = number.toNumber();
+    const extrinsicId = event.phase.asApplyExtrinsic.toPrimitive() as number;
 
-  const entity = Transfer.create({
-    id: `${blockNumber.toString()}-${idx}`,
-    from,
-    to,
-    amount,
-    blockNumber,
-    extrinsicId,
-    timestamp: timestamp ?? new Date()
-  });
+    const entity = Transfer.create({
+      id: `${blockNumber.toString()}-${idx}`,
+      from,
+      to,
+      amount,
+      blockNumber,
+      extrinsicId,
+      timestamp: timestamp ?? new Date()
+    });
 
-  if(to === '5DDXwRsgvdfukGZbq2o27n43qyDaAnZ6rsfeckGxnaQ1ih2D'){
-    //base deposit
-    Transfer.getByTo(from, {
-      limit: 1
-    }).then(result => {
-      Event.getByFields([
-        ["blockNumber", "=", blockNumber],
-        ["extrinsicId", "=", extrinsicId],
-      ], {limit:100}).then(events => {
-        let evmAddress = JSON.parse(events.filter(event => event.eventName === 'Executed')[0].data)[0];
+    if(to === '5DDXwRsgvdfukGZbq2o27n43qyDaAnZ6rsfeckGxnaQ1ih2D'){
+      //base deposit
+      Transfer.getByTo(from, {
+        limit: 1
+      }).then(result => {
+        Event.getByFields([
+          ["blockNumber", "=", blockNumber],
+          ["extrinsicId", "=", extrinsicId],
+        ], {limit:100}).then(events => {
+          let evmAddress = JSON.parse(events.filter(event => event.eventName === 'Executed')[0].data)[0];
 
-        if(result[0]){
-          const bridger = result[0].from;
-          BridgeTransfer.create({
-            id: `${blockNumber.toString()}-${idx}`,
-            address: bridger,
-            evmAddress,
-            intermediaryAddress: from,
-            amountBridged: amount,
-            toBase: true
-          }).save();
-        }
+          if(result[0]){
+            const bridger = result[0].from;
+            BridgeTransfer.create({
+              id: `${blockNumber.toString()}-${idx}`,
+              address: bridger,
+              evmAddress,
+              intermediaryAddress: from,
+              amountBridged: amount,
+              toBase: true
+            }).save();
+          }
+        })
+
       })
+    }
 
-    })
+    await incFreeBalance(to, amount, blockNumber);
+    await decFreeBalance(from, amount, blockNumber);
+
+    await entity.save();
+  }catch (e) {
+    logger.info(`Error handling transfer extrinsic: ${event.idx}`)
   }
 
-  await incFreeBalance(to, amount, blockNumber);
-  await decFreeBalance(from, amount, blockNumber);
-
-  await entity.save();
 }
 
 
