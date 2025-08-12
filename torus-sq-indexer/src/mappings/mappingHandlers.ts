@@ -434,9 +434,10 @@ try{
     const address = `${account[0].toHuman()}`;
 
     const freeBalance = BigInt(account[1].data.free.toString());
-    const stakedBalance = (await DelegateBalance.getByAccount(address, {limit: 100}))?.reduce(
-        (accumulator, delegation) => accumulator + delegation.amount,
-        ZERO) ?? ZERO;
+    const stakedBalance = BigInt(account[1].data.reserved.toString());
+    // (await DelegateBalance.getByAccount(address, {limit: 100}))?.reduce(
+    //     (accumulator, delegation) => accumulator + delegation.amount,
+    //     ZERO) ?? ZERO;
 
     const totalBalance = freeBalance + stakedBalance;
 
